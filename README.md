@@ -7,6 +7,20 @@ OpenTelemetry spans tell you a tool ran for 12 seconds. `atm` tells you the
 agent called the same failing endpoint five times because it never updated
 its premise.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A[trace.jsonl] --> B[Parser]
+    B --> C[Reasoning Graph]
+    C --> D[Loop Detector]
+    C --> E[Stall Detector]
+    C --> F[Assumption Failures]
+    D --> G[Findings + Stats]
+    E --> G
+    F --> G
+```
+
 ## Install
 
 ```bash
