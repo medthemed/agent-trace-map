@@ -51,4 +51,16 @@ export type {
   TraceBatchFileResult,
   TraceBatchResult,
 } from "./batch.js";
+export {
+  OUTPUT_SCHEMA_VERSION,
+  parseOutputFormat,
+  toJsonLine,
+} from "./format.js";
+export type {
+  AnalyzeJson,
+  AnalyzeManyJson,
+  CliJsonOutput,
+  OutputFormat,
+  StatsJson,
+} from "./format.js";
 export { PUBLIC_API, PUBLIC_API_NAMES } from "./public-api.js";

@@ -10,6 +10,14 @@ import {
   type AtmConfig,
 } from "./config.js";
 import { analyze, type DetectorOptions } from "./detectors.js";
+import {
+  OUTPUT_SCHEMA_VERSION,
+  parseOutputFormat,
+  type AnalyzeJson,
+  type AnalyzeManyJson,
+  type OutputFormat,
+  type StatsJson,
+} from "./format.js";
 import { buildGraph } from "./graph.js";
 import { parseJsonl } from "./parse.js";
 import { formatStats, summarizeStats } from "./stats.js";
@@ -18,9 +26,9 @@ import type { AnalysisResult, Finding } from "./types.js";
 const USAGE = `atm — agent-trace-map
 
 Usage:
-  atm analyze <trace.jsonl> [--json] [--stall-ms N] [--loop-threshold N] [--config <path>]
-  atm analyze-many <dir>    [--json] [--stall-ms N] [--loop-threshold N] [--config <path>]
-  atm stats   <trace.jsonl> [--json] [--top N] [--config <path>]
+  atm analyze <trace.jsonl> [--format json] [--stall-ms N] [--loop-threshold N] [--config <path>]
+  atm analyze-many <dir>    [--format json] [--stall-ms N] [--loop-threshold N] [--config <path>]
+  atm stats   <trace.jsonl> [--format json] [--top N] [--config <path>]
 
 Commands:
   analyze       Parse a JSONL trace, build the reasoning graph, run detectors
@@ -28,7 +36,8 @@ Commands:
   stats         Compact summary: counts, durations, tools, finding rollup
 
 Options:
-  --json              Emit machine-readable JSON instead of text
+  --format json|text  Output format (default: text). \`--json\` is a
+                      shorthand for \`--format json\`.
   --stall-ms N        Stall duration threshold in ms (default 5000)
   --loop-threshold N  Consecutive similar spans that count as a loop (default 3)
   --top N             Max tools listed in stats output (default 5)
@@ -53,13 +62,14 @@ function fail(message: string, code = 1): never {
 function parseArgs(argv: string[]): {
   command: string;
   path?: string;
-  json: boolean;
+  format: OutputFormat;
   options: DetectorOptions;
   top: number;
   configPath?: string;
 } {
   const options: DetectorOptions = {};
-  let json = false;
+  let jsonShorthand = false;
+  let formatValue: string | undefined;
   let command = "";
   let path: string | undefined;
   let top = 5;
@@ -71,7 +81,11 @@ function parseArgs(argv: string[]): {
       process.stdout.write(USAGE);
       process.exit(0);
     } else if (a === "--json") {
-      json = true;
+      jsonShorthand = true;
+    } else if (a === "--format") {
+      const v = argv[++i];
+      if (v === undefined) fail("error: --format requires a value");
+      formatValue = v;
     } else if (a === "--stall-ms") {
       const v = Number(argv[++i]);
       if (!Number.isFinite(v) || v < 0) fail("error: --stall-ms requires a non-negative number");
@@ -97,7 +111,19 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { command, path, json, options, top, configPath };
+  let format: OutputFormat = "text";
+  if (jsonShorthand) {
+    format = "json";
+  } else if (formatValue !== undefined) {
+    try {
+      format = parseOutputFormat(formatValue) ?? "text";
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      fail(`error: ${msg}`);
+    }
+  }
+
+  return { command, path, format, options, top, configPath };
 }
 
 /**
@@ -168,7 +194,7 @@ function printText(result: AnalysisResult, parseErrorCount: number): void {
 }
 
 function main(argv: string[]): void {
-  const { command, path, json, options: cliOptions, top, configPath } = parseArgs(argv);
+  const { command, path, format, options: cliOptions, top, configPath } = parseArgs(argv);
 
   if (!command || command === "help") {
     process.stdout.write(USAGE);
@@ -184,6 +210,7 @@ function main(argv: string[]): void {
   }
 
   const options = resolveOptions(configPath, cliOptions);
+  const wantJson = format === "json";
 
   if (command === "analyze-many") {
     const dir = path;
@@ -198,19 +225,16 @@ function main(argv: string[]): void {
     if (batch.aggregate.traces === 0) {
       fail(`error: no .jsonl traces found in ${dir}`);
     }
-    if (json) {
-      process.stdout.write(
-        JSON.stringify(
-          {
-            ok: batch.ok,
-            dir: batch.dir,
-            files: batch.files,
-            aggregate: batch.aggregate,
-          },
-          null,
-          2,
-        ) + "\n",
-      );
+    if (wantJson) {
+      const payload: AnalyzeManyJson = {
+        schema_version: OUTPUT_SCHEMA_VERSION,
+        ok: batch.ok,
+        command: "analyze-many",
+        dir: batch.dir,
+        files: batch.files,
+        aggregate: batch.aggregate,
+      };
+      process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
     } else {
       process.stdout.write(`${formatFindingsTable(batch)}\n`);
     }
@@ -232,14 +256,18 @@ function main(argv: string[]): void {
 
   const { events, errors } = parseJsonl(text);
   if (events.length === 0 && errors.length > 0) {
-    if (json) {
-      process.stdout.write(
-        JSON.stringify(
-          { ok: false, parse_errors: errors, stats: null, findings: [], critical_path: [] },
-          null,
-          2,
-        ) + "\n",
-      );
+    if (wantJson) {
+      const payload: AnalyzeJson = {
+        schema_version: OUTPUT_SCHEMA_VERSION,
+        ok: false,
+        command: "analyze",
+        file,
+        parse_errors: errors,
+        stats: null,
+        findings: [],
+        critical_path: [],
+      };
+      process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
     } else {
       process.stderr.write(`error: no valid events in ${file}\n`);
       for (const e of errors.slice(0, 10)) {
@@ -253,14 +281,16 @@ function main(argv: string[]): void {
 
   if (command === "stats") {
     const summary = summarizeStats(graph, options);
-    if (json) {
-      process.stdout.write(
-        JSON.stringify(
-          { ok: true, parse_errors: errors, summary },
-          null,
-          2,
-        ) + "\n",
-      );
+    if (wantJson) {
+      const payload: StatsJson = {
+        schema_version: OUTPUT_SCHEMA_VERSION,
+        ok: true,
+        command: "stats",
+        file,
+        parse_errors: errors,
+        summary,
+      };
+      process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
     } else {
       if (errors.length > 0) {
         process.stderr.write(`warning: ${errors.length} parse error(s)\n`);
@@ -272,20 +302,18 @@ function main(argv: string[]): void {
 
   const result = analyze(graph, options);
 
-  if (json) {
-    process.stdout.write(
-      JSON.stringify(
-        {
-          ok: true,
-          parse_errors: errors,
-          stats: result.stats,
-          findings: result.findings,
-          critical_path: result.critical_path,
-        },
-        null,
-        2,
-      ) + "\n",
-    );
+  if (wantJson) {
+    const payload: AnalyzeJson = {
+      schema_version: OUTPUT_SCHEMA_VERSION,
+      ok: true,
+      command: "analyze",
+      file,
+      parse_errors: errors,
+      stats: result.stats,
+      findings: result.findings,
+      critical_path: result.critical_path,
+    };
+    process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
     return;
   }
 

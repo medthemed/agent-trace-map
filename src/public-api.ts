@@ -39,6 +39,11 @@ import {
   formatFindingsTable,
   listTraceFiles,
 } from "./batch.js";
+import {
+  OUTPUT_SCHEMA_VERSION,
+  parseOutputFormat,
+  toJsonLine,
+} from "./format.js";
 
 export const PUBLIC_API = Object.freeze({
   TRACE_KINDS,
@@ -72,6 +77,9 @@ export const PUBLIC_API = Object.freeze({
   analyzeMany,
   formatFindingsTable,
   listTraceFiles,
+  OUTPUT_SCHEMA_VERSION,
+  parseOutputFormat,
+  toJsonLine,
 });
 
 export const PUBLIC_API_NAMES: readonly string[] = Object.freeze(
