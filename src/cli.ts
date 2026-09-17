@@ -4,20 +4,24 @@ import { resolve } from "node:path";
 import { analyze, type DetectorOptions } from "./detectors.js";
 import { buildGraph } from "./graph.js";
 import { parseJsonl } from "./parse.js";
+import { formatStats, summarizeStats } from "./stats.js";
 import type { AnalysisResult, Finding } from "./types.js";
 
 const USAGE = `atm — agent-trace-map
 
 Usage:
   atm analyze <trace.jsonl> [--json] [--stall-ms N] [--loop-threshold N]
+  atm stats   <trace.jsonl> [--json] [--top N]
 
 Commands:
   analyze     Parse a JSONL trace, build the reasoning graph, run detectors
+  stats       Compact summary: counts, durations, tools, finding rollup
 
 Options:
   --json              Emit machine-readable JSON instead of text
   --stall-ms N        Stall duration threshold in ms (default 5000)
   --loop-threshold N  Consecutive similar spans that count as a loop (default 3)
+  --top N             Max tools listed in stats output (default 5)
   -h, --help          Show this help
 `;
 
@@ -31,11 +35,13 @@ function parseArgs(argv: string[]): {
   file?: string;
   json: boolean;
   options: DetectorOptions;
+  top: number;
 } {
   const options: DetectorOptions = {};
   let json = false;
   let command = "";
   let file: string | undefined;
+  let top = 5;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -52,6 +58,10 @@ function parseArgs(argv: string[]): {
       const v = Number(argv[++i]);
       if (!Number.isInteger(v) || v < 2) fail("error: --loop-threshold requires an integer >= 2");
       options.loopThreshold = v;
+    } else if (a === "--top") {
+      const v = Number(argv[++i]);
+      if (!Number.isInteger(v) || v < 1) fail("error: --top requires an integer >= 1");
+      top = v;
     } else if (!command) {
       command = a;
     } else if (!file) {
@@ -61,7 +71,7 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { command, file, json, options };
+  return { command, file, json, options, top };
 }
 
 function formatFinding(f: Finding): string {
@@ -111,17 +121,17 @@ function printText(result: AnalysisResult, parseErrorCount: number): void {
 }
 
 function main(argv: string[]): void {
-  const { command, file, json, options } = parseArgs(argv);
+  const { command, file, json, options, top } = parseArgs(argv);
 
   if (!command || command === "help") {
     process.stdout.write(USAGE);
     return;
   }
 
-  if (command !== "analyze") {
+  if (command !== "analyze" && command !== "stats") {
     fail(`error: unknown command "${command}"\n\n${USAGE}`);
   }
-  if (!file) fail("error: analyze requires a path to a .jsonl trace");
+  if (!file) fail(`error: ${command} requires a path to a .jsonl trace`);
 
   const abs = resolve(process.cwd(), file);
   let text: string;
@@ -152,6 +162,26 @@ function main(argv: string[]): void {
   }
 
   const graph = buildGraph(events);
+
+  if (command === "stats") {
+    const summary = summarizeStats(graph, options);
+    if (json) {
+      process.stdout.write(
+        JSON.stringify(
+          { ok: true, parse_errors: errors, summary },
+          null,
+          2,
+        ) + "\n",
+      );
+    } else {
+      if (errors.length > 0) {
+        process.stderr.write(`warning: ${errors.length} parse error(s)\n`);
+      }
+      process.stdout.write(`${formatStats(summary, top)}\n`);
+    }
+    return;
+  }
+
   const result = analyze(graph, options);
 
   if (json) {

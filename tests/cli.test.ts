@@ -55,4 +55,31 @@ describe("atm CLI", () => {
     expect(status).toBe(1);
     expect(stdout).toBe("");
   });
+
+  it("prints a stats summary", () => {
+    const { stdout, status } = runCli(["stats", "examples/loop-trace.jsonl"]);
+    expect(status).toBe(0);
+    expect(stdout).toContain("trace stats");
+    expect(stdout).toContain("http_get: 5 call(s)");
+    expect(stdout).toContain("findings:");
+  });
+
+  it("emits stats JSON with --json", () => {
+    const { stdout, status } = runCli(["stats", "examples/clean-trace.jsonl", "--json"]);
+    expect(status).toBe(0);
+    const parsed = JSON.parse(stdout) as {
+      ok: boolean;
+      summary: { spans: number; findings: { total: number } };
+    };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.summary.spans).toBeGreaterThan(0);
+    expect(parsed.summary.findings.total).toBe(0);
+  });
+
+  it("limits tools listed with --top", () => {
+    const { stdout, status } = runCli(["stats", "examples/loop-trace.jsonl", "--top", "1"]);
+    expect(status).toBe(0);
+    const toolLines = stdout.split("\n").filter((l) => l.includes("call(s)"));
+    expect(toolLines.length).toBeLessThanOrEqual(1);
+  });
 });
