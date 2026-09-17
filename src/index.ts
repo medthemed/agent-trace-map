@@ -21,3 +21,5 @@ export {
   similarityKey,
 } from "./detectors.js";
 export type { DetectorOptions } from "./detectors.js";
+export { formatStats, summarizeStats } from "./stats.js";
+export type { DurationStats, StatsSummary, ToolCount } from "./stats.js";
