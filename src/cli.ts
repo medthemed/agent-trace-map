@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { analyzeMany, formatFindingsTable, type TraceBatchResult } from "./batch.js";
 import {
   ConfigError,
   configToDetectorOptions,
@@ -18,11 +19,13 @@ const USAGE = `atm — agent-trace-map
 
 Usage:
   atm analyze <trace.jsonl> [--json] [--stall-ms N] [--loop-threshold N] [--config <path>]
+  atm analyze-many <dir>    [--json] [--stall-ms N] [--loop-threshold N] [--config <path>]
   atm stats   <trace.jsonl> [--json] [--top N] [--config <path>]
 
 Commands:
-  analyze     Parse a JSONL trace, build the reasoning graph, run detectors
-  stats       Compact summary: counts, durations, tools, finding rollup
+  analyze       Parse a JSONL trace, build the reasoning graph, run detectors
+  analyze-many  Analyze every *.jsonl in a directory; print aggregate findings table
+  stats         Compact summary: counts, durations, tools, finding rollup
 
 Options:
   --json              Emit machine-readable JSON instead of text
@@ -49,7 +52,7 @@ function fail(message: string, code = 1): never {
 
 function parseArgs(argv: string[]): {
   command: string;
-  file?: string;
+  path?: string;
   json: boolean;
   options: DetectorOptions;
   top: number;
@@ -58,7 +61,7 @@ function parseArgs(argv: string[]): {
   const options: DetectorOptions = {};
   let json = false;
   let command = "";
-  let file: string | undefined;
+  let path: string | undefined;
   let top = 5;
   let configPath: string | undefined;
 
@@ -87,14 +90,14 @@ function parseArgs(argv: string[]): {
       configPath = v;
     } else if (!command) {
       command = a;
-    } else if (!file) {
-      file = a;
+    } else if (!path) {
+      path = a;
     } else {
       fail(`error: unexpected argument "${a}"`);
     }
   }
 
-  return { command, file, json, options, top, configPath };
+  return { command, path, json, options, top, configPath };
 }
 
 /**
@@ -165,19 +168,58 @@ function printText(result: AnalysisResult, parseErrorCount: number): void {
 }
 
 function main(argv: string[]): void {
-  const { command, file, json, options: cliOptions, top, configPath } = parseArgs(argv);
+  const { command, path, json, options: cliOptions, top, configPath } = parseArgs(argv);
 
   if (!command || command === "help") {
     process.stdout.write(USAGE);
     return;
   }
 
-  if (command !== "analyze" && command !== "stats") {
+  if (
+    command !== "analyze" &&
+    command !== "analyze-many" &&
+    command !== "stats"
+  ) {
     fail(`error: unknown command "${command}"\n\n${USAGE}`);
   }
-  if (!file) fail(`error: ${command} requires a path to a .jsonl trace`);
 
   const options = resolveOptions(configPath, cliOptions);
+
+  if (command === "analyze-many") {
+    const dir = path;
+    if (!dir) fail("error: analyze-many requires a directory path");
+    let batch: TraceBatchResult;
+    try {
+      batch = analyzeMany(dir, options);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      fail(`error: ${msg}`);
+    }
+    if (batch.aggregate.traces === 0) {
+      fail(`error: no .jsonl traces found in ${dir}`);
+    }
+    if (json) {
+      process.stdout.write(
+        JSON.stringify(
+          {
+            ok: batch.ok,
+            dir: batch.dir,
+            files: batch.files,
+            aggregate: batch.aggregate,
+          },
+          null,
+          2,
+        ) + "\n",
+      );
+    } else {
+      process.stdout.write(`${formatFindingsTable(batch)}\n`);
+    }
+    if (!batch.ok) process.exit(1);
+    return;
+  }
+
+  const file = path;
+  if (!file) fail(`error: ${command} requires a path to a .jsonl trace`);
 
   const abs = resolve(process.cwd(), file);
   let text: string;

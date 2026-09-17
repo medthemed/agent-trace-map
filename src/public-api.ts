@@ -34,6 +34,11 @@ import {
   loadConfigFromDir,
   parseConfig,
 } from "./config.js";
+import {
+  analyzeMany,
+  formatFindingsTable,
+  listTraceFiles,
+} from "./batch.js";
 
 export const PUBLIC_API = Object.freeze({
   TRACE_KINDS,
@@ -64,6 +69,9 @@ export const PUBLIC_API = Object.freeze({
   loadConfig,
   loadConfigFromDir,
   parseConfig,
+  analyzeMany,
+  formatFindingsTable,
+  listTraceFiles,
 });
 
 export const PUBLIC_API_NAMES: readonly string[] = Object.freeze(
