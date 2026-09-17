@@ -30,4 +30,15 @@ export {
   isAnalysisError,
   isTraceParseError,
 } from "./errors.js";
+export {
+  CONFIG_FILENAME,
+  ConfigError,
+  DEFAULT_ATM_CONFIG,
+  configToDetectorOptions,
+  configToJson,
+  loadConfig,
+  loadConfigFromDir,
+  parseConfig,
+} from "./config.js";
+export type { AtmConfig } from "./config.js";
 export { PUBLIC_API, PUBLIC_API_NAMES } from "./public-api.js";

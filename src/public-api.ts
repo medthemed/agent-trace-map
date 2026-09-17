@@ -24,6 +24,16 @@ import {
   isAnalysisError,
   isTraceParseError,
 } from "./errors.js";
+import {
+  CONFIG_FILENAME,
+  ConfigError,
+  DEFAULT_ATM_CONFIG,
+  configToDetectorOptions,
+  configToJson,
+  loadConfig,
+  loadConfigFromDir,
+  parseConfig,
+} from "./config.js";
 
 export const PUBLIC_API = Object.freeze({
   TRACE_KINDS,
@@ -46,6 +56,14 @@ export const PUBLIC_API = Object.freeze({
   assertParseable,
   isAnalysisError,
   isTraceParseError,
+  CONFIG_FILENAME,
+  ConfigError,
+  DEFAULT_ATM_CONFIG,
+  configToDetectorOptions,
+  configToJson,
+  loadConfig,
+  loadConfigFromDir,
+  parseConfig,
 });
 
 export const PUBLIC_API_NAMES: readonly string[] = Object.freeze(

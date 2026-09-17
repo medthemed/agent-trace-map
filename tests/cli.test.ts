@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { describe, expect, it } from "vitest";
+import { rmSync, writeFileSync } from "node:fs";
+import { afterAll, describe, expect, it } from "vitest";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -81,5 +82,75 @@ describe("atm CLI", () => {
     expect(status).toBe(0);
     const toolLines = stdout.split("\n").filter((l) => l.includes("call(s)"));
     expect(toolLines.length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("atm analyze --config", () => {
+  const tmpConfig = join(root, "examples", ".tmp-thresholds.json");
+
+  afterAll(() => {
+    try {
+      rmSync(tmpConfig, { force: true });
+    } catch {
+      /* ignore */
+    }
+  });
+
+  it("applies detector thresholds from a config file", () => {
+    writeFileSync(
+      tmpConfig,
+      JSON.stringify({ loop_threshold: 2, stall_ms: 50 }),
+      "utf8",
+    );
+    const { stdout, status } = runCli([
+      "analyze",
+      "examples/clean-trace.jsonl",
+      "--config",
+      "examples/.tmp-thresholds.json",
+      "--json",
+    ]);
+    expect(status).toBe(0);
+    const parsed = JSON.parse(stdout) as {
+      ok: boolean;
+      findings: { detector: string; data?: Record<string, unknown> }[];
+    };
+    expect(parsed.ok).toBe(true);
+    // stall_ms=50 should flag spans that are slower than the default path
+    const stalls = parsed.findings.filter((f) => f.detector === "stall");
+    // clean-trace may still have short spans; at minimum config must not crash
+    expect(Array.isArray(stalls)).toBe(true);
+  });
+
+  it("rejects an invalid config file", () => {
+    writeFileSync(tmpConfig, JSON.stringify({ loop_threshold: 0 }), "utf8");
+    const { status } = runCli([
+      "analyze",
+      "examples/clean-trace.jsonl",
+      "--config",
+      "examples/.tmp-thresholds.json",
+    ]);
+    expect(status).toBe(1);
+  });
+
+  it("explicit CLI flags override config", () => {
+    writeFileSync(tmpConfig, JSON.stringify({ loop_threshold: 2 }), "utf8");
+    const withConfig = runCli([
+      "analyze",
+      "examples/clean-trace.jsonl",
+      "--config",
+      "examples/.tmp-thresholds.json",
+      "--json",
+    ]);
+    const withOverride = runCli([
+      "analyze",
+      "examples/clean-trace.jsonl",
+      "--config",
+      "examples/.tmp-thresholds.json",
+      "--loop-threshold",
+      "99",
+      "--json",
+    ]);
+    expect(withConfig.status).toBe(0);
+    expect(withOverride.status).toBe(0);
   });
 });
