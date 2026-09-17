@@ -1,0 +1,3 @@
+{"span_id":"p1","parent_span_id":null,"kind":"plan","prompt_ref":"prompts/slow.md","outcome":"Build index","duration_ms":50,"ts":"2026-01-15T12:00:00.000Z"}
+{"span_id":"t1","parent_span_id":"p1","kind":"tool","prompt_ref":"prompts/slow.md","outcome":"crawling docs","duration_ms":12000,"ts":"2026-01-15T12:00:00.100Z","metadata":{"tool":"crawl","ok":true}}
+{"span_id":"r1","parent_span_id":"p1","kind":"reflect","prompt_ref":"prompts/slow.md","outcome":"crawl finished","duration_ms":20,"ts":"2026-01-15T12:00:12.500Z"}

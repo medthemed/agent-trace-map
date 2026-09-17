@@ -1,0 +1,5 @@
+{"span_id":"s1","parent_span_id":null,"kind":"plan","prompt_ref":"prompts/main.md","outcome":"Drafted a 3-step plan","duration_ms":120,"ts":"2026-01-15T10:00:00.000Z","metadata":{"steps":3}}
+{"span_id":"s2","parent_span_id":"s1","kind":"tool","prompt_ref":"prompts/main.md","outcome":"read file config.yaml","duration_ms":45,"ts":"2026-01-15T10:00:00.200Z","metadata":{"tool":"read_file","ok":true}}
+{"span_id":"s3","parent_span_id":"s1","kind":"tool","prompt_ref":"prompts/main.md","outcome":"searched symbols","duration_ms":80,"ts":"2026-01-15T10:00:00.400Z","metadata":{"tool":"grep","ok":true}}
+{"span_id":"s4","parent_span_id":"s1","kind":"reflect","prompt_ref":"prompts/main.md","outcome":"Plan looks feasible","duration_ms":30,"ts":"2026-01-15T10:00:00.600Z"}
+{"span_id":"s5","parent_span_id":"s4","kind":"commit","prompt_ref":"prompts/main.md","outcome":"Committed patch","duration_ms":20,"ts":"2026-01-15T10:00:00.800Z","metadata":{"sha":"abc123"}}
