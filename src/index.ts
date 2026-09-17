@@ -23,3 +23,11 @@ export {
 export type { DetectorOptions } from "./detectors.js";
 export { formatStats, summarizeStats } from "./stats.js";
 export type { DurationStats, StatsSummary, ToolCount } from "./stats.js";
+export {
+  AnalysisError,
+  TraceParseError,
+  assertParseable,
+  isAnalysisError,
+  isTraceParseError,
+} from "./errors.js";
+export { PUBLIC_API, PUBLIC_API_NAMES } from "./public-api.js";
