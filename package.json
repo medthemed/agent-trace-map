@@ -1,6 +1,6 @@
 {
   "name": "agent-trace-map",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Map agent reasoning loops from JSONL traces — detect stalls, loops, and assumption failures",
   "license": "MIT",
   "type": "module",

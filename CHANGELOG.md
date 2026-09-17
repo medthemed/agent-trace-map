@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.1.1] - 2026-09-17
+
+### Added
+
+- `atm stats <trace.jsonl>` — compact operational summary
+  (span counts, duration min/avg/p95/max, tool usage, finding rollup)
+- `--top N` option to limit tools listed in stats output
+- Library exports: `summarizeStats`, `formatStats`
+- README sample-trace walkthrough for `examples/loop-trace.jsonl`
+- README CI badge and stats usage
 
 ## [0.1.0] - 2026-01-15
 
