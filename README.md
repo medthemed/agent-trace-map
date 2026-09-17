@@ -1,5 +1,9 @@
 # agent-trace-map
 
+[![CI](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml/badge.svg)](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Map agent **reasoning loops** from JSONL traces. Detect infinite retries,
 stalls, shared assumption failures, and the critical path to a crash.
 
@@ -16,9 +20,11 @@ flowchart LR
     C --> D[Loop Detector]
     C --> E[Stall Detector]
     C --> F[Assumption Failures]
+    C --> H[Stats Summary]
     D --> G[Findings + Stats]
     E --> G
     F --> G
+    H --> G
 ```
 
 ## Install
@@ -36,6 +42,10 @@ node dist/cli.js analyze examples/loop-trace.jsonl
 
 # machine-readable
 node dist/cli.js analyze examples/loop-trace.jsonl --json
+
+# compact operational summary (counts, durations, tools, finding rollup)
+node dist/cli.js stats examples/loop-trace.jsonl
+node dist/cli.js stats examples/loop-trace.jsonl --json --top 3
 
 # tune thresholds
 node dist/cli.js analyze examples/clean-trace.jsonl --stall-ms 2000 --loop-threshold 2
@@ -66,7 +76,7 @@ Required fields: `span_id`, `kind`, `duration_ms`.
 ## Library
 
 ```ts
-import { parseJsonl, buildGraph, analyze } from "agent-trace-map";
+import { parseJsonl, buildGraph, analyze, summarizeStats } from "agent-trace-map";
 
 const { events } = parseJsonl(jsonlText);
 const graph = buildGraph(events);
@@ -75,6 +85,9 @@ const result = analyze(graph, { loopThreshold: 3, stallMs: 5000 });
 for (const finding of result.findings) {
   console.log(finding.severity, finding.detector, finding.title);
 }
+
+const summary = summarizeStats(graph);
+console.log(summary.duration.avg_ms, summary.tools[0]?.tool);
 ```
 
 ## Detectors
@@ -85,6 +98,34 @@ for (const finding of result.findings) {
 | `stall` | Spans longer than `stallMs`, or idle gaps between siblings |
 | `assumption_failure` | Multiple failures sharing one root-cause signature |
 | `critical_path` | Ancestor chain to the first hard failure (informational) |
+
+## Sample trace walkthrough
+
+`examples/loop-trace.jsonl` is a 7-span retry storm. Walking it line by line:
+
+| # | span_id | kind | What happened |
+|---|---|---|---|
+| 1 | `p0` | plan | Root plan: "Retry the network call until it works" |
+| 2 | `t1` | tool | `http_get` fails with `ECONNREFUSED` |
+| 3 | `t2` | tool | Same call, same error |
+| 4 | `t3` | tool | Same call, same error |
+| 5 | `t4` | tool | Same call, same error |
+| 6 | `t5` | tool | Same call, same error — 5th identical retry |
+| 7 | `f1` | fail | Agent gives up |
+
+All five tool spans share `kind|prompt_ref|tool|outcome`, so the loop
+detector flags one warning covering spans `t1…t5`. The shared
+`ECONNREFUSED` root cause also trips the assumption-failure detector.
+`critical_path` then reports `p0 → f1` (the fail span is a direct child
+of the plan).
+
+```bash
+node dist/cli.js analyze examples/loop-trace.jsonl
+node dist/cli.js stats   examples/loop-trace.jsonl
+```
+
+`analyze` is the deep report; `stats` is the quick triage rollup
+(`http_get: 5 call(s) (5 failed)`, duration p95, finding counts).
 
 ## Examples
 
@@ -101,6 +142,7 @@ npm run build
 ```
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design details.
+Releases are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
