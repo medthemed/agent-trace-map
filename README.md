@@ -1,7 +1,7 @@
 # agent-trace-map
 
 [![CI](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml/badge.svg)](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/badge/version-0.1.1-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
+[![npm version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Map agent **reasoning loops** from JSONL traces. Detect infinite retries,
@@ -76,9 +76,23 @@ Required fields: `span_id`, `kind`, `duration_ms`.
 ## Library
 
 ```ts
-import { parseJsonl, buildGraph, analyze, summarizeStats } from "agent-trace-map";
+import {
+  parseJsonl,
+  buildGraph,
+  analyze,
+  summarizeStats,
+  assertParseable,
+  TraceParseError,
+} from "agent-trace-map";
 
-const { events } = parseJsonl(jsonlText);
+const { events, errors } = parseJsonl(jsonlText);
+try {
+  assertParseable(events, errors, "trace.jsonl");
+} catch (err) {
+  if (err instanceof TraceParseError) console.error(err.parse_errors);
+  else throw err;
+}
+
 const graph = buildGraph(events);
 const result = analyze(graph, { loopThreshold: 3, stallMs: 5000 });
 
@@ -89,6 +103,9 @@ for (const finding of result.findings) {
 const summary = summarizeStats(graph);
 console.log(summary.duration.avg_ms, summary.tools[0]?.tool);
 ```
+
+The runtime export catalog is frozen (`PUBLIC_API` / `PUBLIC_API_NAMES`) so
+accidental mutation of the export table fails fast.
 
 ## Detectors
 

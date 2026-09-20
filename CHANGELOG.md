@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-20
+
+### Added
+
+- Typed `AnalysisError` / `TraceParseError` (instanceof-friendly)
+- `assertParseable` throws when a trace has zero valid events
+- Frozen public export catalog: `PUBLIC_API`, `PUBLIC_API_NAMES`
+- Integration suite over every `examples/*.jsonl` fixture
+
+### Changed
+
+- README documents typed errors and the frozen export surface
+
 ## [0.1.1] - 2026-09-17
 
 ### Added
