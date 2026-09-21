@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  ConfigError,
+  configToDetectorOptions,
+  loadConfig,
+  loadConfigFromDir,
+  type AtmConfig,
+} from "./config.js";
 import { analyze, type DetectorOptions } from "./detectors.js";
 import { buildGraph } from "./graph.js";
 import { parseJsonl } from "./parse.js";
@@ -10,8 +17,8 @@ import type { AnalysisResult, Finding } from "./types.js";
 const USAGE = `atm — agent-trace-map
 
 Usage:
-  atm analyze <trace.jsonl> [--json] [--stall-ms N] [--loop-threshold N]
-  atm stats   <trace.jsonl> [--json] [--top N]
+  atm analyze <trace.jsonl> [--json] [--stall-ms N] [--loop-threshold N] [--config <path>]
+  atm stats   <trace.jsonl> [--json] [--top N] [--config <path>]
 
 Commands:
   analyze     Parse a JSONL trace, build the reasoning graph, run detectors
@@ -22,7 +29,17 @@ Options:
   --stall-ms N        Stall duration threshold in ms (default 5000)
   --loop-threshold N  Consecutive similar spans that count as a loop (default 3)
   --top N             Max tools listed in stats output (default 5)
+  --config <path>     Load detector thresholds from a JSON config file
+                      (also auto-loads atm.config.json from the working directory)
   -h, --help          Show this help
+
+Config file (atm.config.json):
+  {
+    "loop_threshold": 3,
+    "stall_ms": 5000,
+    "stall_gap_ms": 3000,
+    "assumption_failure_min": 2
+  }
 `;
 
 function fail(message: string, code = 1): never {
@@ -36,12 +53,14 @@ function parseArgs(argv: string[]): {
   json: boolean;
   options: DetectorOptions;
   top: number;
+  configPath?: string;
 } {
   const options: DetectorOptions = {};
   let json = false;
   let command = "";
   let file: string | undefined;
   let top = 5;
+  let configPath: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
@@ -62,6 +81,10 @@ function parseArgs(argv: string[]): {
       const v = Number(argv[++i]);
       if (!Number.isInteger(v) || v < 1) fail("error: --top requires an integer >= 1");
       top = v;
+    } else if (a === "--config") {
+      const v = argv[++i];
+      if (v === undefined) fail("error: --config requires a path");
+      configPath = v;
     } else if (!command) {
       command = a;
     } else if (!file) {
@@ -71,7 +94,28 @@ function parseArgs(argv: string[]): {
     }
   }
 
-  return { command, file, json, options, top };
+  return { command, file, json, options, top, configPath };
+}
+
+/**
+ * Load detector options: config file first (cwd auto-load or --config),
+ * then explicit CLI flags override.
+ */
+function resolveOptions(
+  configPath: string | undefined,
+  cliOptions: DetectorOptions,
+): DetectorOptions {
+  let config: AtmConfig;
+  try {
+    config =
+      configPath !== undefined
+        ? loadConfig(resolve(process.cwd(), configPath))
+        : loadConfigFromDir(process.cwd());
+  } catch (err) {
+    if (err instanceof ConfigError) fail(`error: ${err.message}`);
+    throw err;
+  }
+  return { ...configToDetectorOptions(config), ...cliOptions };
 }
 
 function formatFinding(f: Finding): string {
@@ -121,7 +165,7 @@ function printText(result: AnalysisResult, parseErrorCount: number): void {
 }
 
 function main(argv: string[]): void {
-  const { command, file, json, options, top } = parseArgs(argv);
+  const { command, file, json, options: cliOptions, top, configPath } = parseArgs(argv);
 
   if (!command || command === "help") {
     process.stdout.write(USAGE);
@@ -132,6 +176,8 @@ function main(argv: string[]): void {
     fail(`error: unknown command "${command}"\n\n${USAGE}`);
   }
   if (!file) fail(`error: ${command} requires a path to a .jsonl trace`);
+
+  const options = resolveOptions(configPath, cliOptions);
 
   const abs = resolve(process.cwd(), file);
   let text: string;
