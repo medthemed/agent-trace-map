@@ -1,7 +1,7 @@
 # agent-trace-map
 
 [![CI](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml/badge.svg)](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
+[![npm version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Map agent **reasoning loops** from JSONL traces. Detect infinite retries,
@@ -49,7 +49,25 @@ node dist/cli.js stats examples/loop-trace.jsonl --json --top 3
 
 # tune thresholds
 node dist/cli.js analyze examples/clean-trace.jsonl --stall-ms 2000 --loop-threshold 2
+
+# pin thresholds in a config file
+node dist/cli.js analyze examples/loop-trace.jsonl --config atm.config.json
 ```
+
+### Config (`atm.config.json`)
+
+Optional project file loaded from the working directory (or `--config path`):
+
+```json
+{
+  "loop_threshold": 3,
+  "stall_ms": 5000,
+  "stall_gap_ms": 3000,
+  "assumption_failure_min": 2
+}
+```
+
+Explicit CLI flags still override the file.
 
 Dev alias: `npm run cli -- analyze examples/loop-trace.jsonl`
 

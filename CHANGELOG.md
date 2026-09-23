@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-23
+
+### Added
+
+- Optional `atm.config.json` for detector thresholds (`loop_threshold`, `stall_ms`, `stall_gap_ms`, `assumption_failure_min`)
+- `atm analyze` / `atm stats` accept `--config <path>` and auto-load from cwd
+- Library exports: `parseConfig`, `loadConfig`, `loadConfigFromDir`, `configToDetectorOptions`, `ConfigError`
+
+### Changed
+
+- Explicit CLI flags override config-file values
+
 ## [0.2.0] - 2026-09-20
 
 ### Added
