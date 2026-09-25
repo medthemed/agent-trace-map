@@ -41,4 +41,14 @@ export {
   parseConfig,
 } from "./config.js";
 export type { AtmConfig } from "./config.js";
+export {
+  analyzeMany,
+  formatFindingsTable,
+  listTraceFiles,
+} from "./batch.js";
+export type {
+  TraceBatchAggregate,
+  TraceBatchFileResult,
+  TraceBatchResult,
+} from "./batch.js";
 export { PUBLIC_API, PUBLIC_API_NAMES } from "./public-api.js";

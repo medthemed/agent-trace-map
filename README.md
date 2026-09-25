@@ -47,6 +47,9 @@ node dist/cli.js analyze examples/loop-trace.jsonl --json
 node dist/cli.js stats examples/loop-trace.jsonl
 node dist/cli.js stats examples/loop-trace.jsonl --json --top 3
 
+# aggregate findings across a directory of traces
+node dist/cli.js analyze-many examples/
+
 # tune thresholds
 node dist/cli.js analyze examples/clean-trace.jsonl --stall-ms 2000 --loop-threshold 2
 
@@ -161,6 +164,49 @@ node dist/cli.js stats   examples/loop-trace.jsonl
 
 `analyze` is the deep report; `stats` is the quick triage rollup
 (`http_get: 5 call(s) (5 failed)`, duration p95, finding counts).
+
+## Batch analysis
+
+`analyze-many` walks a directory of `*.jsonl` traces (non-recursive),
+runs detectors on each, and prints a per-trace rollup plus an aggregate
+findings table:
+
+```bash
+node dist/cli.js analyze-many examples/
+```
+
+```text
+analyze-many: examples
+
+file              spans  findings  status
+---------------  ------  --------  ------
+clean-trace.jsonl      7         0  ok
+loop-trace.jsonl       7         3  ok
+stall-trace.jsonl      5         1  ok
+
+findings: 4
+
+severity  detector            trace                  title
+--------  ------------------  ---------------------  ------------------------------
+warning   loop                loop-trace.jsonl       5 consecutive similar tool spans
+error     assumption_failure  loop-trace.jsonl       5 failures share ECONNREFUSED
+info      critical_path       loop-trace.jsonl       path to first failure
+warning   stall               stall-trace.jsonl      span exceeded 12s
+
+aggregate: 3 trace(s), 3 ok, 0 failed, 19 span(s), 4 finding(s)
+  by_detector: loop=1 assumption_failure=1 critical_path=1 stall=1
+  by_severity: warning=2 error=1 info=1
+```
+
+Exit code is `0` only when every trace analyzed successfully. The same
+logic is available as a library:
+
+```ts
+import { analyzeMany, formatFindingsTable } from "agent-trace-map";
+
+const batch = analyzeMany("traces/");
+console.log(formatFindingsTable(batch));
+```
 
 ## Examples
 
