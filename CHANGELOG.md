@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-26
+
+### Added
+
+- `atm analyze-many <dir>` — analyze every `*.jsonl` trace in a directory
+- Per-trace rollup table and aggregate findings table (by detector / severity)
+- Library exports: `analyzeMany`, `listTraceFiles`, `formatFindingsTable`
+
+### Changed
+
+- README documents batch analysis and the library entry points
+
 ## [0.3.0] - 2026-09-23
 
 ### Added
