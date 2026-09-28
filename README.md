@@ -40,21 +40,51 @@ npm run build
 # human-readable report
 node dist/cli.js analyze examples/loop-trace.jsonl
 
-# machine-readable
-node dist/cli.js analyze examples/loop-trace.jsonl --json
+# machine-readable (stable envelope)
+node dist/cli.js analyze examples/loop-trace.jsonl --format json
 
 # compact operational summary (counts, durations, tools, finding rollup)
 node dist/cli.js stats examples/loop-trace.jsonl
-node dist/cli.js stats examples/loop-trace.jsonl --json --top 3
+node dist/cli.js stats examples/loop-trace.jsonl --format json --top 3
 
 # aggregate findings across a directory of traces
 node dist/cli.js analyze-many examples/
+node dist/cli.js analyze-many examples/ --format json
 
 # tune thresholds
 node dist/cli.js analyze examples/clean-trace.jsonl --stall-ms 2000 --loop-threshold 2
 
 # pin thresholds in a config file
 node dist/cli.js analyze examples/loop-trace.jsonl --config atm.config.json
+```
+
+## JSON pipe contract
+
+`analyze`, `analyze-many`, and `stats` accept `--format json` (`--json` is
+a shorthand). Every payload is a small envelope:
+
+```json
+{
+  "schema_version": "1",
+  "ok": true,
+  "command": "analyze",
+  "...": "command-specific fields"
+}
+```
+
+`schema_version` is currently `"1"`. Additive fields may appear later;
+existing fields will not be renamed or removed within the same major
+schema version. Exit codes are unchanged by `--format json`.
+
+| Command | Extra fields |
+|---|---|
+| `analyze` | `file`, `parse_errors`, `stats`, `findings`, `critical_path` |
+| `analyze-many` | `dir`, `files[]`, `aggregate` |
+| `stats` | `file`, `parse_errors`, `summary` |
+
+```bash
+# pipe-friendly: jq exits non-zero when ok is false
+node dist/cli.js analyze trace.jsonl --format json | jq -e .ok
 ```
 
 ### Config (`atm.config.json`)
