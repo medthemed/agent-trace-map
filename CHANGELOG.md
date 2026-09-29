@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-29
+
+### Added
+
+- `--format json` for `analyze`, `analyze-many`, and `stats`
+- Stable JSON envelope: `{ schema_version: "1", ok, command, ... }`
+- Library exports: `OUTPUT_SCHEMA_VERSION`, `parseOutputFormat`, `toJsonLine`
+- README documents the pipe contract and per-command payload fields
+
+### Changed
+
+- `--json` is now a shorthand for `--format json`
+
 ## [0.4.0] - 2026-09-26
 
 ### Added

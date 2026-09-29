@@ -1,7 +1,7 @@
 # agent-trace-map
 
 [![CI](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml/badge.svg)](https://github.com/medthemed/agent-trace-map/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
+[![npm version](https://img.shields.io/badge/version-0.5.0-blue.svg)](https://github.com/medthemed/agent-trace-map/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Map agent **reasoning loops** from JSONL traces. Detect infinite retries,
